@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #111;
+    color: #e8e8e8;
+    min-height: 100vh;
+    padding: 16px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #888; margin-bottom: 12px; }
+  .box {
+    background: #1c1c1c;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .box h2 { font-size: 13px; color: #888; font-weight: 500; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select, textarea {
+    width: 100%;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    color: #e8e8e8;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 8px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #555; }
+  button {
+    background: #2a2a2a;
+    color: #e8e8e8;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  button:hover { background: #333; }
+  button.primary { background: #4a7dff; color: #fff; }
+  button.primary:hover { background: #5a8dff; }
+  button.stop { background: #7d2a2a; color: #fff; }
+  button.start-topic { background: #2a7d4a; color: #fff; }
+  button.start-topic:hover { background: #3a8d5a; }
+  button.help { background: #2a2a4a; color: #a8b8ff; }
+  button.help:hover { background: #3a3a5a; }
+  .ais { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    background: #222;
+    border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chip small { color: #666; font-size: 11px; }
+  .chip button {
+    background: none;
+    color: #888;
+    padding: 0;
+    font-size: 16px;
+    margin: 0;
+    line-height: 1;
+  }
+  .chip button:hover { color: #ff5555; }
+  .msg {
+    padding: 12px 0;
+    border-bottom: 1px solid #1c1c1c;
+    animation: fade 0.3s;
+  }
+  .msg:last-child { border-bottom: none; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .msg-head { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .msg-head b { color: #e8e8e8; }
+  .msg-head .tag {
+    background: #2a2a2a;
+    color: #888;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    margin-left: 4px;
+  }
+  .msg-text { font-size: 15px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.topic-divider {
+    text-align: center;
+    padding: 12px 0;
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+    border-bottom: 1px dashed #2a2a2a;
+  }
+  .status { font-size: 12px; color: #666; text-align: center; padding: 8px 0; }
+  .empty { text-align: center; color: #555; padding: 40px 0; font-size: 14px; }
+  .hint { font-size: 11px; color: #666; margin-bottom: 8px; }
+  .hint a { color: #4a7dff; }
+  label { font-size: 11px; color: #666; display: block; margin-bottom: 3px; }
+  .current-topic {
+    background: #152515;
+    border: 1px solid #2a5a2a;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .current-topic b { color: #7dff7d; }
+  .help-content {
+    display: none;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #c8c8c8;
+    margin-top: 12px;
+  }
+  .help-content.open { display: block; }
+  .help-content h3 {
+    font-size: 15px;
+    color: #e8e8e8;
+    margin: 16px 0 8px;
+    font-weight: 600;
+  }
+  .help-content h3:first-child { margin-top: 0; }
+  .help-content ol, .help-content ul { padding-left: 20px; margin-bottom: 10px; }
+  .help-content li { margin-bottom: 4px; }
+  .help-content a { color: #4a7dff; text-decoration: none; }
+  .help-content a:hover { text-decoration: underline; }
+  .help-content code {
+    background: #2a2a2a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #a8d8ff;
+  }
+  .help-content .tip {
+    background: #2a2a1a;
+    border-left: 3px solid #7d7d3a;
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .help-content .warn {
+    background: #2a1a1a;
+    border-left: 3px solid #7d3a3a;
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .help-content table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+  .help-content td, .help-content th { padding: 8px; border-bottom: 1px solid #2a2a2a; text-align: left; }
+  .help-content th { color: #888; font-weight: 500; font-size: 11px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💬 AI Chat</h1>
+  <div class="sub">Добавь ИИ разных провайдеров — они будут общаться</div>
+
+  <div class="box">
+    <button class="help" onclick="toggleHelp(event)" style="width:100%; text-align:left; margin:0;">📖 Как пользоваться сайтом ▾</button>
+    <div class="help-content" id="helpContent">
+
+      <h3>🎯 Что это такое</h3>
+      <p>AI Chat — страница, на которой несколько искусственных интеллектов переписываются между собой на заданную тему. Вы задаёте тему — они обсуждают. Можно добавить разных ИИ (Google, Groq, Claude, DeepSeek) — они будут спорить, соглашаться, задавать вопросы друг другу.</p>
+
+      <h3>🚀 Быстрый старт</h3>
+
+      <p><b>Шаг 1. Получите бесплатный API-ключ</b></p>
+      <p>Это «пропуск», который позволяет ИИ писать. Выбрать можно любой:</p>
+      <ul>
+        <li><b>🟢 Google Gemini</b> — самый простой<br>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a><br>
+          Войти через Google → «Create API key» → скопировать (начинается с <code>AIza...</code>)<br>
+          <i>Бесплатно: 1500 запросов в день</i>
+        </li>
+        <li><b>⚡ Groq</b> — самый быстрый<br>
+          <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a><br>
+          Зарегистрироваться → «Create API Key» → скопировать (начинается с <code>gsk_...</code>)<br>
+          <i>Бесплатно: 14400 запросов в день</i>
+        </li>
+        <li><b>🌐 OpenRouter</b> — 20+ бесплатных моделей<br>
+          <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a><br>
+          Зарегистрироваться → создать ключ (начинается с <code>sk-or-v1...</code>)<br>
+          <i>Бесплатно: 50 запросов в день</i>
+        </li>
+      </ul>
+
+      <p><b>Шаг 2. Добавьте ИИ</b></p>
+      <p>В блоке «Добавить ИИ» заполните: имя, аватар (эмодзи), провайдера, модель и вставьте ключ. Нажмите «Добавить».</p>
+      <div class="tip">💡 Совет: добавьте 2-3 ИИ. Можно брать разных провайдеров — они будут спорить друг с другом.</div>
+
+      <p><b>Шаг 3. Задайте тему</b></p>
+      <p>В блоке «🎯 Тема беседы» напишите, о чём ИИ должны говорить. Например: «Может ли ИИ быть творцом?». Нажмите «🎬 Начать беседу на эту тему».</p>
+
+      <p><b>Шаг 4. Запустите беседу</b></p>
+      <p>Нажмите «▶ Запустить». ИИ начнут писать реплики каждые 12 секунд.</p>
+
+      <h3>🎮 Кнопки управления</h3>
+      <table>
+        <tr><th>Кнопка</th><th>Что делает</th></tr>
+        <tr><td>▶ Запустить</td><td>ИИ пишут автоматически</td></tr>
+        <tr><td>⏸ Стоп</td><td>Пауза</td></tr>
+        <tr><td>⚡ Один пост</td><td>Одна случайная реплика</td></tr>
+        <tr><td>🗑 Очистить всё</td><td>Удалить беседу и тему</td></tr>
+      </table>
+
+      <h3>💡 Как сделать беседу интереснее</h3>
+      <ul>
+        <li><b>Разные характеры.</b> Если все ИИ на одной модели — пишут похоже. Возьмите Gemini + Llama + Claude — начнётся настоящий спор.</li>
+        <li><b>Меняйте тему.</b> Введите новую тему → «🎬». В ленте появится разделитель.</li>
+        <li><b>Имена с характером.</b> Философ 🟣, Скептик 🔴, Поэт 🌸, Учёный 🔵</li>
+        <li><b>Останавливайте.</b> Ушло не туда → «⏸ Стоп» → новая тема → заново.</li>
+      </ul>
+
+      <h3>⚠️ Что важно знать</h3>
+      <div class="warn">
+        <b>Всё хранится в вашем браузере.</b> Если почистить кэш — беседа исчезнет. Ключ виден только вам, никуда не отправляется.<br><br>
+        <b>Лимиты бесплатно:</b> Google — 1500/день, Groq — 14400/день, OpenRouter — 50/день.<br><br>
+        <b>ИИ пишут только когда вкладка открыта.</b> Закрыли — ИИ «заснули».<br><br>
+        <b>Разные устройства — разные беседы.</b> У вас на телефоне своя, у друга на ноутбуке своя.
+      </div>
+
+      <h3>🆘 Если что-то не работает</h3>
+      <ul>
+        <li><b>ИИ не отвечает</b> → проверьте ключ. Google — <code>AIza...</code>, Groq — <code>gsk_...</code>, OpenRouter — <code>sk-or-v1...</code></li>
+        <li><b>«API key not valid»</b> → ключ скопирован не полностью</li>
+        <li><b>«Quota exceeded»</b> → лимит на сегодня исчерпан</li>
+        <li><b>«Model not found»</b> → выберите другую модель</li>
+        <li><b>ИИ повторяются</b> → добавьте ИИ с другого провайдера</li>
+      </ul>
+
+      <h3>🎭 Примеры тем</h3>
+      <ul>
+        <li>«Может ли ИИ быть творцом?»</li>
+        <li>«Что важнее — логика или интуиция?»</li>
+        <li>«Искусство — подражание или творение?»</li>
+        <li>«Какая игра была бы идеальной?»</li>
+        <li>«Что такое сознание?»</li>
+      </ul>
+
+      <div class="tip">💬 <b>Приятной беседы!</b> Если что-то непонятно — экспериментируйте. Беседу всегда можно очистить и начать заново.</div>
+
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>🎯 Тема беседы</h2>
+    <div id="currentTopicBox"></div>
+    <textarea id="topic" placeholder="Например: Может ли ИИ быть творцом?"></textarea>
+    <button class="start-topic" onclick="startTopic()">🎬 Начать беседу на эту тему</button>
+    <div class="hint">Первый случайный ИИ напишет вступление. Дальше остальные подхватят.</div>
+  </div>
+
+  <div class="box">
+    <h2>Добавить ИИ</h2>
+    <input id="name" placeholder="Имя (например: Софос)" maxlength="20">
+    <input id="avatar" placeholder="Аватар (эмодзи)" maxlength="4" value="🤖">
+
+    <label>Провайдер</label>
+    <select id="provider" onchange="onProviderChange()">
+      <option value="google">Google Gemini — бесплатно, 1500/день</option>
+      <option value="groq">Groq (Llama, Gemma) — бесплатно, 14400/день</option>
+      <option value="openrouter">OpenRouter — 20+ бесплатных моделей</option>
+      <option value="deepseek">DeepSeek — платно, дёшево</option>
+      <option value="anthropic">Anthropic Claude — платно</option>
+    </select>
+
+    <label>Модель</label>
+    <select id="model"></select>
+
+    <label>API-ключ</label>
+    <input id="key" placeholder="Вставь ключ" type="password">
+
+    <button class="primary" onclick="addAi()">Добавить</button>
+
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <div class="box">
+    <h2>Участники (<span id="aiCount">0</span>)</h2>
+    <div class="ais" id="aiList"></div>
+  </div>
+
+  <div class="box">
+    <button class="primary" onclick="start()">▶ Запустить</button>
+    <button class="stop" onclick="stop()">⏸ Стоп</button>
+    <button onclick="onePost()">⚡ Один пост</button>
+    <button onclick="clearHistory()">🗑 Очистить всё</button>
+    <div class="status" id="status">Готово</div>
+  </div>
+
+  <div class="box">
+    <h2>Беседа</h2>
+    <div id="feed"><div class="empty">Пока пусто. Задай тему и нажми «Начать беседу».</div></div>
+  </div>
+</div>
+
+<script>
+const LS_AIS = 'aichat_ais';
+const LS_MSGS = 'aichat_msgs';
+const LS_TOPIC = 'aichat_topic';
+
+const PROVIDERS = {
+  google: {
+    name: 'Google',
+    models: [
+      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (быстрая)' },
+      { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
+      { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (умнее)' }
+    ],
+    keyHint: 'Получить: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>',
+    keyPrefix: 'AIza'
+  },
+  groq: {
+    name: 'Groq',
+    models: [
+      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B (умная)' },
+      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (мгновенная)' },
+      { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+      { id: 'gemma2-9b-it', label: 'Gemma 2 9B' }
+    ],
+    keyHint: 'Получить: <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> (бесплатно)',
+    keyPrefix: 'gsk_'
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    models: [
+      { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (free)' },
+      { id: 'deepseek/deepseek-r1:free', label: 'DeepSeek R1 (free)' },
+      { id: 'google/gemma-2-9b-it:free', label: 'Gemma 2 9B (free)' },
+      { id: 'mistralai/mistral-7b-instruct:free', label: 'Mistral 7B (free)' }
+    ],
+    keyHint: 'Получить: <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a>',
+    keyPrefix: 'sk-or-v1'
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    models: [
+      { id: 'deepseek-chat', label: 'DeepSeek Chat' },
+      { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner' }
+    ],
+    keyHint: 'Получить: <a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com/api_keys</a>',
+    keyPrefix: 'sk-'
+  },
+  anthropic: {
+    name: 'Anthropic',
+    models: [
+      { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (быстрая)' },
+      { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (умная)' }
+    ],
+    keyHint: 'Получить: <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com/settings/keys</a>',
+    keyPrefix: 'sk-ant'
+  }
+};
+
+let ais = JSON.parse(localStorage.getItem(LS_AIS) || '[]');
+let msgs = JSON.parse(localStorage.getItem(LS_MSGS) || '[]');
+let currentTopic = localStorage.getItem(LS_TOPIC) || '';
+let running = false;
+let timer = null;
+
+function toggleHelp(e) {
+  const el = document.getElementById('helpContent');
+  el.classList.toggle('open');
+  e.target.textContent = el.classList.contains('open') ? '📖 Как пользоваться сайтом ▴' : '📖 Как пользоваться сайтом ▾';
+}
+
+function save() {
+  localStorage.setItem(LS_AIS, JSON.stringify(ais));
+  localStorage.setItem(LS_MSGS, JSON.stringify(msgs));
+  localStorage.setItem(LS_TOPIC, currentTopic);
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function onProviderChange() {
+  const p = document.getElementById('provider').value;
+  const cfg = PROVIDERS[p];
+  const modelSel = document.getElementById('model');
+  modelSel.innerHTML = cfg.models.map(m => `<option value="${m.id}">${m.label}</option>`).join('');
+  document.getElementById('hint').innerHTML = cfg.keyHint;
+}
+
+function addAi() {
+  const name = document.getElementById('name').value.trim();
+  const avatar = document.getElementById('avatar').value.trim() || '🤖';
+  const provider = document.getElementById('provider').value;
+  const model = document.getElementById('model').value;
+  const key = document.getElementById('key').value.trim();
+
+  if (!name || !key) return alert('Заполни имя и ключ');
+  if (ais.find(a => a.name === name)) return alert('Такое имя уже есть');
+
+  ais.push({ name, avatar, provider, model, key });
+  save();
+  document.getElementById('name').value = '';
+  document.getElementById('avatar').value = '🤖';
+  document.getElementById('key').value = '';
+  render();
+}
+
+function removeAi(name) {
+  if (!confirm('Удалить ' + name + '?')) return;
+  ais = ais.filter(a => a.name !== name);
+  save();
+  render();
+}
+
+function render() {
+  document.getElementById('aiCount').textContent = ais.length;
+  const list = document.getElementById('aiList');
+  if (ais.length === 0) {
+    list.innerHTML = '<div style="color:#555; font-size:13px;">Никого нет</div>';
+  } else {
+    list.innerHTML = ais.map(a => {
+      const pName = PROVIDERS[a.provider] ? PROVIDERS[a.provider].name : a.provider;
+      return `<div class="chip">${a.avatar} ${esc(a.name)} <small>${pName}</small><button onclick="removeAi('${esc(a.name)}')">×</button></div>`;
+    }).join('');
+  }
+  renderTopicBox();
+  renderFeed();
+}
+
+function renderTopicBox() {
+  const box = document.getElementById('currentTopicBox');
+  if (currentTopic) {
+    box.innerHTML = `<div class="current-topic">🎯 Текущая тема: <b>${esc(currentTopic)}</b></div>`;
+  } else {
+    box.innerHTML = '';
+  }
+}
+
+function renderFeed() {
+  const feed = document.getElementById('feed');
+  if (msgs.length === 0) {
+    feed.innerHTML = '<div class="empty">Пока пусто. Задай тему и нажми «Начать беседу».</div>';
+    return;
+  }
+  feed.innerHTML = msgs.map(m => {
+    if (m.type === 'topic') {
+      return `<div class="topic-divider">— ${esc(m.text)} —</div>`;
+    }
+    const pName = m.provider ? (PROVIDERS[m.provider] ? PROVIDERS[m.provider].name : m.provider) : '';
+    return `<div class="msg">
+      <div class="msg-head">${m.avatar} <b>${esc(m.name)}</b>${pName ? '<span class="tag">' + pName + '</span>' : ''} · ${m.time}</div>
+      <div class="msg-text">${esc(m.text)}</div>
+    </div>`;
+  }).join('');
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+function buildPrompt(ai) {
+  const history = msgs.filter(m => m.type !== 'topic').slice(-10).map(m => `${m.avatar} ${m.name}: ${m.text}`).join('\n');
+  const others = ais.filter(a => a.name !== ai.name).map(a => `${a.avatar} ${a.name}`).join(', ');
+
+  return `Ты — ${ai.name}, участник беседы. Твой аватар: ${ai.avatar}.
+Другие участники: ${others || 'пока никого'}.
+
+Тема беседы: "${currentTopic}"
+Обсуждай именно эту тему. Не уходи в сторону.
+
+${history ? 'История беседы:\n' + history + '\n\n' : ''}
+Напиши короткую реплику (1-3 предложения) на русском. Развивай тему, реагируй на других участников, можешь задавать вопросы или спорить. Не пиши своё имя в начале. Можешь использовать эмодзи.
+
+Твоя реплика по теме "${currentTopic}":`;
+}
+
+function buildTopicPrompt(ai) {
+  return `Ты — ${ai.name}. Ты открываешь беседу на тему: "${currentTopic}".
+
+Напиши вступительную реплику (2-3 предложения) на русском. Задай тон обсуждению — можешь начать с вопроса, с утверждения, с сомнения. Не пиши своё имя в начале.
+
+Твоё вступление:`;
+}
+
+async function callProvider(ai, prompt) {
+  const p = ai.provider;
+
+  if (p === 'google') {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${ai.model}:generateContent?key=${ai.key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      }
+    );
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  }
+
+  if (p === 'anthropic') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ai.key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: ai.model,
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.content?.[0]?.text?.trim() || '';
+  }
+
+  let url = '';
+  if (p === 'groq') url = 'https://api.groq.com/openai/v1/chat/completions';
+  if (p === 'openrouter') url = 'https://openrouter.ai/api/v1/chat/completions';
+  if (p === 'deepseek') url = 'https://api.deepseek.com/v1/chat/completions';
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + ai.key
+    },
+    body: JSON.stringify({
+      model: ai.model,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 300
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  return data.choices?.[0]?.message?.content?.trim() || '';
+}
+
+async function startTopic() {
+  const topicInput = document.getElementById('topic').value.trim();
+  if (!topicInput) return alert('Напиши тему беседы');
+  if (ais.length === 0) return alert('Сначала добавь хотя бы одного ИИ');
+
+  currentTopic = topicInput;
+  save();
+
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  msgs.push({ type: 'topic', text: `Тема: ${currentTopic}`, time });
+  save();
+  renderFeed();
+
+  const ai = ais[Math.floor(Math.random() * ais.length)];
+  const status = document.getElementById('status');
+  status.textContent = `${ai.avatar} ${ai.name} открывает беседу...`;
+
+  try {
+    const text = await callProvider(ai, buildTopicPrompt(ai));
+    if (!text) { status.textContent = '❌ Пустой ответ'; return; }
+
+    const t2 = new Date();
+    const time2 = t2.getHours().toString().padStart(2, '0') + ':' + t2.getMinutes().toString().padStart(2, '0');
+    msgs.push({ name: ai.name, avatar: ai.avatar, provider: ai.provider, text, time: time2 });
+    if (msgs.length > 200) msgs = msgs.slice(-200);
+    save();
+    renderFeed();
+    document.getElementById('topic').value = '';
+    status.textContent = `✅ ${ai.name} открыл беседу`;
+  } catch (e) {
+    status.textContent = '❌ ' + e.message;
+  }
+}
+
+async function onePost() {
+  if (ais.length === 0) return alert('Добавь хотя бы одного ИИ');
+  if (!currentTopic) return alert('Сначала задай тему и нажми «Начать беседу»');
+
+  const ai = ais[Math.floor(Math.random() * ais.length)];
+  const status = document.getElementById('status');
+  status.textContent = `${ai.avatar} ${ai.name} (${PROVIDERS[ai.provider].name}) думает...`;
+
+  try {
+    const text = await callProvider(ai, buildPrompt(ai));
+    if (!text) { status.textContent = '❌ Пустой ответ'; return; }
+
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    msgs.push({ name: ai.name, avatar: ai.avatar, provider: ai.provider, text, time });
+    if (msgs.length > 200) msgs = msgs.slice(-200);
+    save();
+    renderFeed();
+    status.textContent = `✅ ${ai.name} ответил`;
+  } catch (e) {
+    status.textContent = '❌ ' + e.message;
+  }
+}
+
+function start() {
+  if (ais.length < 2) return alert('Нужно минимум 2 ИИ для беседы');
+  if (!currentTopic) return alert('Сначала задай тему и нажми «Начать беседу»');
+  if (running) return;
+  running = true;
+  document.getElementById('status').textContent = '🟢 Беседа идёт (пост каждые 12 секунд)';
+  onePost();
+  timer = setInterval(onePost, 12000);
+}
+
+function stop() {
+  running = false;
+  clearInterval(timer);
+  document.getElementById('status').textContent = '⏸ Остановлено';
+}
+
+function clearHistory() {
+  if (!confirm('Очистить всю беседу и тему?')) return;
+  msgs = [];
+  currentTopic = '';
+  save();
+  render();
+}
+
+onProviderChange();
+render();
+</script>
+</body>
+</html>
